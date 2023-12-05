@@ -95,6 +95,7 @@ final class Day05Tests: XCTestCase {
 
     func testPart2() async throws {
         let challenge = Day05(data: testData)
-        XCTAssertEqual(String(describing: challenge.part2()), "46")
+        let result = await challenge.part2()
+        XCTAssertEqual(String(describing: result), "46")
     }
 }

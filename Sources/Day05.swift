@@ -134,9 +134,75 @@ struct Day05: AdventDay {
         }
     }
 
+    // Part two with help
+
+    func part2() async -> Any {
+        let blocks = data.split(separator: "\n\n").map(String.init)
+
+        let seeds: [Int] = blocks[0].split(separator: " ").dropFirst().map { Int($0)! }
+
+        let maps: [AlmanacMap] = blocks.dropFirst().map { mapString in
+            let rows = mapString.split(separator: "\n")
+            let source = rows[0]
+            let map = rows.dropFirst().map { row in
+                let values = try! rangesRegex.wholeMatch(in: row)!
+                let destinationStart = values.1
+                let sourceStart = values.2
+                let rangeLength = values.3
+
+                return AlmanacMap.Range(destination: destinationStart, source: sourceStart, length: rangeLength)
+            }
+            return AlmanacMap(name: String(source), map: map)
+        }
+
+        let seedRanges = seeds.chunks(ofCount: 2).map { $0.first!..<($0.first! + $0.last!) }
+        let asyncLocations = await withTaskGroup(of: [Int].self) { group in
+            for seedRange in seedRanges {
+                group.addTask {
+                    seedRange.compactMap { seed in
+                        seedLocation(seed: seed, maps: maps)
+                    }
+                }
+            }
+
+            var results = [Int]()
+            for await list in group {
+                results.append(contentsOf: list)
+            }
+            return results
+        }
+
+        return String(asyncLocations.min()!)
+    }
+
+    func seedLocation(seed: Int, maps: [AlmanacMap]) -> Int? {
+        var value = seed
+        maps.forEach { map in
+            if let range = map.map.first(where: { $0.contains(value) }) {
+                value = value - range.source + range.destination
+            }
+        }
+        return value
+    }
+
+    struct AlmanacMap {
+        struct Range {
+            let destination: Int
+            let source: Int
+            let length: Int
+
+            func contains(_ value: Int) -> Bool {
+                value >= source && value < (source + length)
+            }
+        }
+
+        let name: String
+        let map: [Range]
+    }
+
     // Dont
 
-    func part2() -> Any {
+    func part2_BRUTEFORCE() -> Any {
         var lowestSoilNumber: [Int] = []
 
         let seeds = extractSeedRangeNumbers()
